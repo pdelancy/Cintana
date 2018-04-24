@@ -18,22 +18,44 @@ app.get('/api/log/visit/:uuid', async (req, res) => {
     var agent = useragent.parse(req.headers['user-agent']);
     agent = agent.toString().split('/');
 
-    let browser = agent[0].split(' ')[0];
-    let os = agent[1].split(' ').slice(0, -1).join(' ');
+    let browser = agent[0].split(' ').slice(0, -2).join(' ');
+    let os = agent[1].split(' ').slice(1, -1).join(' ');
 
     await db.query(`
       INSERT INTO events
-        (userId, timestamp, path, browser, os)
+        (uuid, timestamp, path, browser, os)
         VALUES ($1, $2, $3, $4, $5)
     `, [
       req.params.uuid,
-      req.query.timestamp || new Date(),
+      req.query.timestamp || new Date().toISOString(),
       req.query.path,
       browser,
       os,
     ]);
     console.log("received");
     res.send('received');
+  } catch(e) {
+    console.log('Error receiving event:', e);
+    res.status(400).send(e.message);
+  }
+})
+
+app.get('/api/events', async (req, res)=>{
+  try{
+    console.log("start time", req.query.start);
+    console.log("end time", req.query.end);
+    let data = await db.query(`
+      SELECT *
+        FROM events
+        WHERE timestamp >= $1
+        AND timestamp < $2
+    `, [
+      req.query.start,
+      req.query.end,
+    ]);
+
+    console.log("data", data.rows);
+    res.send(data.rows);
   } catch(e) {
     console.log('Error receiving event:', e);
     res.status(400).send(e.message);
