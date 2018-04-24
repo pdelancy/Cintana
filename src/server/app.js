@@ -8,8 +8,9 @@ const useragent = require('useragent');
 const { Pool } = require('pg');
 const db = new Pool({database: 'analytics'});
 
-app.get("/", () => {
+app.get("/api", (req, res) => {
   console.log("HELLO!");
+  res.send("hello world");
 })
 
 app.get('/api/log/visit/:uuid', async (req, res) => {
@@ -31,6 +32,7 @@ app.get('/api/log/visit/:uuid', async (req, res) => {
       browser,
       os,
     ]);
+    console.log("received");
     res.send('received');
   } catch(e) {
     console.log('Error receiving event:', e);
