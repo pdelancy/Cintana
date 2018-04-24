@@ -42,41 +42,38 @@ app.get('/api/log/visit/:uuid', async (req, res) => {
 
 app.get('/api/events', async (req, res)=>{
   try{
-    let data = await db.query(`
-      SELECT *
-        FROM events
-        WHERE timestamp >= $1
-        AND timestamp < $2
-    `, [
-      req.query.start,
-      req.query.end,
-    ]);
-    res.send(data.rows);
-  } catch(e) {
-    console.log('Error receiving event:', e);
-    res.status(400).send(e.message);
+    let times = await db.query(`
+      SELECT * FROM events
+      WHERE timestamp > $1 AND timestamp < $2
+    `, [req.query.start, req.query.end]);
+    // console.log("FOUND TIMES:", times.rows);
+    res.send(times.rows)
+  } catch (e) {
+    res.status(400).send(e.message)
   }
 })
 
-// app.get('/api/statistics/:timeunit?', async (req, res)=>{
-//   try{
-//     let count = 1
-//     let queryStr = `SELECT * FROM events
-//         WHERE ${req.query.start ? 'timestamp >= $' + count++ : ''}`
-//         + `${req.query.end ? ' AND timestamp < $'+ count++ : ''}`
-//         + `${req.query.browser ? ' AND browser = $'+ count++ : ''}`
-//         + `${req.query.os ? ' AND os = $'+ count++ : ''}`
-//         + `${req.query.path ? ' AND path like $'+ count++ : ''}`
-//     console.log('queryStr', queryStr);
-//
-//     let data = await db.query(queryStr, [req.query.start, req.query.end, req.query.browser, req.query.os, req.query.path ? req.query.path + '%' : null].filter(a => a))
-//     console.log('data', data.rows);
-//
-//   } catch(e) {
-//     console.log('Error receiving event:', e);
-//     res.status(400).send(e.message);
-//   }
-// })
+app.get('/api/statistics/:timeunit', async (req, res) => {
+  //start, end, browser, os, path
+  let start = (new Date(req.query.start)).toISOString(), end = (new Date(req.query.end)).toISOString()
+  let count = 2;
+  let result = await db.query(
+    `SELECT date_trunc($${1}, timestamp) AS timebucket, COUNT(*), COUNT(DISTINCT uuid) AS uniqueCount FROM events
+      WHERE ${start ? 'timestamp >= $' + count++ : ""}
+      ${end ? ' AND timestamp <= $' + count++ : ""}
+      ${req.query.browser ? ' AND browser = $' + count++ : ""}
+      ${req.query.os ? ' AND end = $' + count++ : ""}
+      ${req.query.path ? ' AND path LIKE $' + count++ : ""}
+      GROUP BY date_trunc($${1}, timestamp)`
+      ,
+    [
+      req.params.timeunit === 'hour' ? 'hour' : 'minute',
+      start, end,
+      req.query.browser, req.query.os,
+      req.query.path ? req.query.path + '%' : null
+    ].filter(a => a));
+  res.send(result.rows)
+});
 
 app.get('/api/values', async (req, res)=>{
   try{
