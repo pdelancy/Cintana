@@ -62,6 +62,15 @@ app.get('/api/events', async (req, res)=>{
   }
 })
 
+app.get('/api/statistics/:timeunit?', async (req, res)=>{
+  try{
+
+  } catch(e) {
+    console.log('Error receiving event:', e);
+    res.status(400).send(e.message);
+  }
+})
+
 app.listen(process.env.PORT || 3001, () => {
   console.log("Listening on port " + 3001);
 })
