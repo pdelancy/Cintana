@@ -1,0 +1,54 @@
+select {
+  margin: 40px;
+  width: 100px;
+  font-size: 30px
+}
+
+.square {
+  height: 50px;
+  width: 50px;
+  background-color: green;
+  margin: 2px;
+  border-radius: 5px;
+}
+
+.board {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.row {
+  display: flex;
+}
+
+.is-on {
+  background-color: #98d498;
+}
+
+.hover {
+  background-color: darkGreen;
+}
+
+.reset {
+  background-color: pink;
+  color: white;
+  width: 100px;
+  height: 40px;
+  border-radius: 5px;
+  border: none;
+  font-size: 30px;
+  box-shadow: 2px 2px black;
+}
+
+.counter {
+  font-size: 50px;
+  font-weight: bold;
+  text-shadow: 2px 2px pink;
+}
+
+.game-footer {
+  display: flex;
+  justify-content: space-around;
+  margin: 30px;
+}

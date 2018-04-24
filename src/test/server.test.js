@@ -250,185 +250,185 @@ describe('analytics server', () => {
 
   });
 
-  describe('GET /api/statistics/:timeunit', () => {
-
-    let sample = {};
-
-    before(async () => {
-      // Setup some events on a random hour 10+ years ago for testing
-      sample.uuid = uuidv4();
-      sample.start = moment().subtract(366 * 10 * 24 + Math.floor(Math.random() * 10000), 'hour').startOf('hour').toDate();
-      sample.end = moment(sample.start).endOf('hour').toDate();
-
-      sample.events = [
-        {
-          timestamp: moment(sample.start).add(5, 'minutes').add(0, 'seconds'),
-          useragent: UserAgents.iOSSafari,
-        },
-        {
-          timestamp: moment(sample.start).add(7, 'minutes').add(12, 'seconds'),
-          useragent: UserAgents.iOSSafari,
-        },
-        {
-          timestamp: moment(sample.start).add(22, 'minutes').add(24, 'seconds'),
-          useragent: UserAgents.WindowsPhone,
-        },
-      ];
-
-      await Promise.all(sample.events.map(e => {
-        return fetch(`${host}/api/log/visit/${sample.uuid}?${pathQuery}&timestamp=${e.timestamp.toISOString()}`, {
-          headers: { 'User-Agent': e.useragent },
-        });
-      }));
-
-      sample.query = `${host}/api/statistics/hour?direct=true&start=${sample.start.toISOString()}&end=${sample.end.toISOString()}`;
-    });
-
-    it('should return an array', async () => {
-      const start = moment().startOf('day');
-      const end = moment().endOf('day');
-
-      const res = await fetch(host + `/api/statistics/hour?direct=true&start=${start}&end=${end}`);
-      let json = null;
-      try {
-        json = await res.json();
-      } catch (e) {
-        assert.fail('endpoint returned non-json body');
-      }
-
-      assert.ok(
-        Array.isArray(json),
-        'Returned body should be an array, but was: ' + JSON.stringify(json)
-      );
-    });
-
-    it('should return at least one datapoint', async () => {
-      const uuid = uuidv4();
-
-      const start = moment().startOf('hour').toISOString();
-      // Make a new data point:
-      await fetch(host + '/api/log/visit/' + uuid + '?' + pathQuery);
-      const end = moment().endOf('hour').toISOString();
-
-      const res = await fetch(host + `/api/statistics/hour?direct=true&start=${start}&end=${end}`);
-      const json = await res.json();
-
-      const bucket = json.find(bucket => bucket.timebucket === start)
-      assert.ok(bucket != null, 'could not find the expected time bucket in the results');
-      assert.ok(+bucket.count > 0);
-      assert.ok(bucket.browser == null);
-      assert.ok(bucket.os == null);
-      assert.ok(bucket.path == null);
-    });
-
-    it('can retrieve the correct items in a given bucket', async () => {
-      const res = await fetch(sample.query);
-      const json = await res.json();
-
-      assert.equal(
-        json.reduce((count, e) => count + (+e.count), 0),
-        3,
-        'expected three events but got: ' + shallowStringify(json)
-      );
-
-    });
-
-    it('can filter by path to find specific visits', async () => {
-      const uuid = uuidv4();
-      const path = pathname + '/' + uuidv4().slice(-4);
-
-      const start = moment().startOf('hour').toISOString();
-      // Make a new data point:
-      await fetch(host + '/api/log/visit/' + uuid + '?path=' + encodeURIComponent(path));
-      const end = moment().endOf('hour').toISOString();
-
-      const res = await fetch(host + `/api/statistics/hour?direct=true&start=${start}&end=${end}&path=${encodeURIComponent(path)}`);
-      const json = await res.json();
-
-      assert.equal(json.length, 1, 'expected one result but got: ' + shallowStringify(json));
-      const bucket = json[0];
-      assert.ok(bucket != null, 'could not find the expected time bucket in the results');
-      assert.equal(+bucket.count, 1);
-      assert.equal(bucket.timebucket, start);
-      assert.ok(bucket.browser == null);
-      assert.ok(bucket.os == null);
-      assert.ok(bucket.path == null || bucket.path == path);
-    });
-  });
-
-  describe('GET /api/values', () => {
-    it('should return a json object', async () => {
-      const res = await fetch(host + '/api/values');
-      assert.ok(res.ok, 'returned status code: ' + res.status);
-      const json = await res.json();
-
-      assert.ok(
-        typeof json === 'object' && json != null,
-        'returned result should be an object, but was:\n' +
-        JSON.stringify(json, null, 2)
-      );
-    });
-
-    it('should return the correct fields on the object', async () => {
-      const res = await fetch(host + '/api/values');
-      assert.ok(res.ok, 'returned status code: ' + res.status);
-      const json = await res.json();
-
-      assert.ok(
-        typeof json === 'object' && json != null,
-        'returned result should be an object, but was:\n' +
-        JSON.stringify(json, null, 2)
-      );
-
-      assert.ok(
-        Array.isArray(json.browser),
-        'result.browser should be an array, but was:\n' +
-        JSON.stringify(json.browser, null, 2)
-      );
-      assert.ok(
-        Array.isArray(json.os),
-        'result.os should be an array, but was:\n' +
-        JSON.stringify(json.os, null, 2)
-      );
-    });
-
-    it('should include the correct values', async () => {
-      const uuid = uuidv4();
-      await fetch(host + '/api/log/visit/' + uuid + '?' + pathQuery, {
-        headers: { 'User-Agent': UserAgents.WindowsPhone },
-      });
-
-      const res = await fetch(host + '/api/values?direct=true');
-      assert.ok(res.ok, 'returned status code: ' + res.status);
-      const json = await res.json();
-
-      assert.ok(
-        typeof json === 'object' && json != null,
-        'returned result should be an object, but was:\n' +
-        JSON.stringify(json, null, 2)
-      );
-
-      assert.ok(
-        Array.isArray(json.browser),
-        'result.browser should be an array, but was:\n' +
-        JSON.stringify(json.browser, null, 2)
-      );
-      assert.ok(
-        Array.isArray(json.os),
-        'result.os should be an array, but was:\n' +
-        JSON.stringify(json.os, null, 2)
-      );
-
-      assert.ok(
-        json.browser.includes('IE Mobile'),
-        'result.browser should include IE Mobile, which is inserted in test cases, but did not:\n' +
-        JSON.stringify(json.browser, null, 2)
-      );
-      assert.ok(
-        json.os.includes('Windows Phone'),
-        'result.os should include Windows Phone, which is inserted in test cases, but did not:\n' +
-        JSON.stringify(json.os, null, 2)
-      );
-    });
-  });
+//   describe('GET /api/statistics/:timeunit', () => {
+//
+//     let sample = {};
+//
+//     before(async () => {
+//       // Setup some events on a random hour 10+ years ago for testing
+//       sample.uuid = uuidv4();
+//       sample.start = moment().subtract(366 * 10 * 24 + Math.floor(Math.random() * 10000), 'hour').startOf('hour').toDate();
+//       sample.end = moment(sample.start).endOf('hour').toDate();
+//
+//       sample.events = [
+//         {
+//           timestamp: moment(sample.start).add(5, 'minutes').add(0, 'seconds'),
+//           useragent: UserAgents.iOSSafari,
+//         },
+//         {
+//           timestamp: moment(sample.start).add(7, 'minutes').add(12, 'seconds'),
+//           useragent: UserAgents.iOSSafari,
+//         },
+//         {
+//           timestamp: moment(sample.start).add(22, 'minutes').add(24, 'seconds'),
+//           useragent: UserAgents.WindowsPhone,
+//         },
+//       ];
+//
+//       await Promise.all(sample.events.map(e => {
+//         return fetch(`${host}/api/log/visit/${sample.uuid}?${pathQuery}&timestamp=${e.timestamp.toISOString()}`, {
+//           headers: { 'User-Agent': e.useragent },
+//         });
+//       }));
+//
+//       sample.query = `${host}/api/statistics/hour?direct=true&start=${sample.start.toISOString()}&end=${sample.end.toISOString()}`;
+//     });
+//
+//     it('should return an array', async () => {
+//       const start = moment().startOf('day');
+//       const end = moment().endOf('day');
+//
+//       const res = await fetch(host + `/api/statistics/hour?direct=true&start=${start}&end=${end}`);
+//       let json = null;
+//       try {
+//         json = await res.json();
+//       } catch (e) {
+//         assert.fail('endpoint returned non-json body');
+//       }
+//
+//       assert.ok(
+//         Array.isArray(json),
+//         'Returned body should be an array, but was: ' + JSON.stringify(json)
+//       );
+//     });
+//
+//     it('should return at least one datapoint', async () => {
+//       const uuid = uuidv4();
+//
+//       const start = moment().startOf('hour').toISOString();
+//       // Make a new data point:
+//       await fetch(host + '/api/log/visit/' + uuid + '?' + pathQuery);
+//       const end = moment().endOf('hour').toISOString();
+//
+//       const res = await fetch(host + `/api/statistics/hour?direct=true&start=${start}&end=${end}`);
+//       const json = await res.json();
+//
+//       const bucket = json.find(bucket => bucket.timebucket === start)
+//       assert.ok(bucket != null, 'could not find the expected time bucket in the results');
+//       assert.ok(+bucket.count > 0);
+//       assert.ok(bucket.browser == null);
+//       assert.ok(bucket.os == null);
+//       assert.ok(bucket.path == null);
+//     });
+//
+//     it('can retrieve the correct items in a given bucket', async () => {
+//       const res = await fetch(sample.query);
+//       const json = await res.json();
+//
+//       assert.equal(
+//         json.reduce((count, e) => count + (+e.count), 0),
+//         3,
+//         'expected three events but got: ' + shallowStringify(json)
+//       );
+//
+//     });
+//
+//     it('can filter by path to find specific visits', async () => {
+//       const uuid = uuidv4();
+//       const path = pathname + '/' + uuidv4().slice(-4);
+//
+//       const start = moment().startOf('hour').toISOString();
+//       // Make a new data point:
+//       await fetch(host + '/api/log/visit/' + uuid + '?path=' + encodeURIComponent(path));
+//       const end = moment().endOf('hour').toISOString();
+//
+//       const res = await fetch(host + `/api/statistics/hour?direct=true&start=${start}&end=${end}&path=${encodeURIComponent(path)}`);
+//       const json = await res.json();
+//
+//       assert.equal(json.length, 1, 'expected one result but got: ' + shallowStringify(json));
+//       const bucket = json[0];
+//       assert.ok(bucket != null, 'could not find the expected time bucket in the results');
+//       assert.equal(+bucket.count, 1);
+//       assert.equal(bucket.timebucket, start);
+//       assert.ok(bucket.browser == null);
+//       assert.ok(bucket.os == null);
+//       assert.ok(bucket.path == null || bucket.path == path);
+//     });
+//   });
+//
+//   describe('GET /api/values', () => {
+//     it('should return a json object', async () => {
+//       const res = await fetch(host + '/api/values');
+//       assert.ok(res.ok, 'returned status code: ' + res.status);
+//       const json = await res.json();
+//
+//       assert.ok(
+//         typeof json === 'object' && json != null,
+//         'returned result should be an object, but was:\n' +
+//         JSON.stringify(json, null, 2)
+//       );
+//     });
+//
+//     it('should return the correct fields on the object', async () => {
+//       const res = await fetch(host + '/api/values');
+//       assert.ok(res.ok, 'returned status code: ' + res.status);
+//       const json = await res.json();
+//
+//       assert.ok(
+//         typeof json === 'object' && json != null,
+//         'returned result should be an object, but was:\n' +
+//         JSON.stringify(json, null, 2)
+//       );
+//
+//       assert.ok(
+//         Array.isArray(json.browser),
+//         'result.browser should be an array, but was:\n' +
+//         JSON.stringify(json.browser, null, 2)
+//       );
+//       assert.ok(
+//         Array.isArray(json.os),
+//         'result.os should be an array, but was:\n' +
+//         JSON.stringify(json.os, null, 2)
+//       );
+//     });
+//
+//     it('should include the correct values', async () => {
+//       const uuid = uuidv4();
+//       await fetch(host + '/api/log/visit/' + uuid + '?' + pathQuery, {
+//         headers: { 'User-Agent': UserAgents.WindowsPhone },
+//       });
+//
+//       const res = await fetch(host + '/api/values?direct=true');
+//       assert.ok(res.ok, 'returned status code: ' + res.status);
+//       const json = await res.json();
+//
+//       assert.ok(
+//         typeof json === 'object' && json != null,
+//         'returned result should be an object, but was:\n' +
+//         JSON.stringify(json, null, 2)
+//       );
+//
+//       assert.ok(
+//         Array.isArray(json.browser),
+//         'result.browser should be an array, but was:\n' +
+//         JSON.stringify(json.browser, null, 2)
+//       );
+//       assert.ok(
+//         Array.isArray(json.os),
+//         'result.os should be an array, but was:\n' +
+//         JSON.stringify(json.os, null, 2)
+//       );
+//
+//       assert.ok(
+//         json.browser.includes('IE Mobile'),
+//         'result.browser should include IE Mobile, which is inserted in test cases, but did not:\n' +
+//         JSON.stringify(json.browser, null, 2)
+//       );
+//       assert.ok(
+//         json.os.includes('Windows Phone'),
+//         'result.os should include Windows Phone, which is inserted in test cases, but did not:\n' +
+//         JSON.stringify(json.os, null, 2)
+//       );
+    // });
+  // });
 });
