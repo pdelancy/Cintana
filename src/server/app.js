@@ -1,9 +1,10 @@
 "use strict";
 
+const moment = require('moment');
+
 const express = require('express');
 const app = express();
 const useragent = require('useragent');
-
 
 const { Pool } = require('pg');
 const db = new Pool({database: 'analytics'});
@@ -32,8 +33,7 @@ app.get('/api/log/visit/:uuid', async (req, res) => {
       browser,
       os,
     ]);
-    console.log("received");
-    res.send('received');
+    res.status(200).json({success: true})
   } catch(e) {
     console.log('Error receiving event:', e);
     res.status(400).send(e.message);
@@ -42,8 +42,6 @@ app.get('/api/log/visit/:uuid', async (req, res) => {
 
 app.get('/api/events', async (req, res)=>{
   try{
-    console.log("start time", req.query.start);
-    console.log("end time", req.query.end);
     let data = await db.query(`
       SELECT *
         FROM events
@@ -53,8 +51,6 @@ app.get('/api/events', async (req, res)=>{
       req.query.start,
       req.query.end,
     ]);
-
-    console.log("data", data.rows);
     res.send(data.rows);
   } catch(e) {
     console.log('Error receiving event:', e);
@@ -62,11 +58,43 @@ app.get('/api/events', async (req, res)=>{
   }
 })
 
-app.get('/api/statistics/:timeunit?', async (req, res)=>{
-  try{
+// app.get('/api/statistics/:timeunit?', async (req, res)=>{
+//   try{
+//     let count = 1
+//     let queryStr = `SELECT * FROM events
+//         WHERE ${req.query.start ? 'timestamp >= $' + count++ : ''}`
+//         + `${req.query.end ? ' AND timestamp < $'+ count++ : ''}`
+//         + `${req.query.browser ? ' AND browser = $'+ count++ : ''}`
+//         + `${req.query.os ? ' AND os = $'+ count++ : ''}`
+//         + `${req.query.path ? ' AND path like $'+ count++ : ''}`
+//     console.log('queryStr', queryStr);
+//
+//     let data = await db.query(queryStr, [req.query.start, req.query.end, req.query.browser, req.query.os, req.query.path ? req.query.path + '%' : null].filter(a => a))
+//     console.log('data', data.rows);
+//
+//   } catch(e) {
+//     console.log('Error receiving event:', e);
+//     res.status(400).send(e.message);
+//   }
+// })
 
+app.get('/api/values', async (req, res)=>{
+  try{
+    let returnResult = {
+      browser: [],
+      os: []
+    };
+    let browsers = await db.query(`SELECT DISTINCT browser FROM events`);
+    let oss = await db.query(`SELECT DISTINCT os FROM events`);
+    browsers.rows.map((item)=>{
+      returnResult.browser.push(item.browser)
+    });
+    oss.rows.map((item)=>{
+      returnResult.os.push(item.os)
+    });
+    res.send(returnResult);
   } catch(e) {
-    console.log('Error receiving event:', e);
+    console.log('Error getting values:', e);
     res.status(400).send(e.message);
   }
 })
