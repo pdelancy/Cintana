@@ -1,0 +1,31 @@
+{
+  "name": "analytics-project",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "aphrodite": "^2.1.1",
+    "chart.js": "^2.7.2",
+    "express": "^4.16.3",
+    "moment": "^2.22.0",
+    "qs": "^6.5.1",
+    "react": "^16.3.1",
+    "react-chartjs-2": "^2.7.0",
+    "react-dates": "^16.5.0",
+    "react-dom": "^16.3.1",
+    "react-scripts": "1.1.4",
+    "react-select": "^1.2.1",
+    "react-tabs": "^2.2.1"
+  },
+  "scripts": {
+    "start": "BROWSER=none REACT_EDITOR=none react-scripts start",
+    "build": "react-scripts build",
+    "test": "mocha --exit src/test",
+    "eject": "react-scripts eject"
+  },
+  "devDependencies": {
+    "mocha": "^5.1.0",
+    "node-fetch": "^2.1.2",
+    "useragent": "^2.3.0",
+    "uuid": "^3.2.1"
+  }
+}
