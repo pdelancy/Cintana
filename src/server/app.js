@@ -6,15 +6,16 @@ const app = express();
 const { Pool } = require('pg');
 const db = new Pool({database: 'analytics'});
 
-app.get("/", () => {
+app.get("/api", (req, res) => {
   console.log("HELLO!");
+  res.send("hello world");
 })
 
-app.get('api/log/visit/:uuid', async (req, res) => {
+app.get('/api/log/visit/:uuid', async (req, res) => {
   try {
     await db.query(`
       INSERT INTO events
-        (user, timestamp, path, browser, os)
+        (userId, timestamp, path, browser, os)
         VALUES ($1, $2, $3, $4, $5)
     `, [
       req.params.uuid,
@@ -23,6 +24,7 @@ app.get('api/log/visit/:uuid', async (req, res) => {
       req.query.browser,
       req.query.os,
     ]);
+    console.log("received");
     res.send('received');
   } catch(e) {
     console.log('Error receiving event:', e);
