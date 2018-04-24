@@ -75,6 +75,13 @@ app.get('/api/statistics/:timeunit', async (req, res) => {
   res.send(result.rows)
 });
 
+app.get('/api/values', async (req, res) => {
+  let result = await db.query(
+    `SELECT DISTINCT (browser, os) FROM events`
+  )
+  console.log(result.rows);
+})
+
 app.listen(process.env.PORT || 3001, () => {
   console.log("Listening on port " + 3001);
 })
