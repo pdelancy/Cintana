@@ -280,12 +280,6 @@ describe('analytics server', () => {
           headers: { 'User-Agent': e.useragent },
         });
       }));
-
-<<<<<<< HEAD
-=======
-      console.log(sample.start.toISOString(), sample.end.toISOString());
-
->>>>>>> 3d8fec1861a6053e7fdee28e7578f69912a112c2
       sample.query = `${host}/api/statistics/hour?direct=true&start=${sample.start.toISOString()}&end=${sample.end.toISOString()}`;
     });
 
@@ -300,11 +294,6 @@ describe('analytics server', () => {
       } catch (e) {
         assert.fail('endpoint returned non-json body');
       }
-<<<<<<< HEAD
-
-=======
-      console.log(json);
->>>>>>> 3d8fec1861a6053e7fdee28e7578f69912a112c2
       assert.ok(
         Array.isArray(json),
         'Returned body should be an array, but was: ' + JSON.stringify(json)
