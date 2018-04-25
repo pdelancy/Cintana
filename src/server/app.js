@@ -1,13 +1,19 @@
 "use strict";
 
 const moment = require('moment');
-
 const express = require('express');
 const app = express();
 const useragent = require('useragent');
 
+
 const { Pool } = require('pg');
-const db = new Pool({database: 'analytics'});
+const db = new Pool({
+  host: process.env.PG_HOST,
+  database: process.env.PG_DATABASE,
+  port: process.env.PG_PORT,
+  user: process.env.PG_USER,
+  password: process.env.PG_PASSWORD,
+});
 
 app.get("/api", (req, res) => {
   console.log("HELLO!");
@@ -21,14 +27,14 @@ app.get('/api/log/visit/:uuid', async (req, res) => {
 
     let browser = agent[0].split(' ').slice(0, -2).join(' ');
     let os = agent[1].split(' ').slice(1, -1).join(' ');
-    // console.log(req.query.timestamp || moment().toISOString());
+
     await db.query(`
       INSERT INTO events
         (uuid, timestamp, path, browser, os)
         VALUES ($1, $2, $3, $4, $5)
     `, [
       req.params.uuid,
-      req.query.timestamp || moment().toISOString(),
+      req.query.timestamp || new Date().toISOString(),
       req.query.path,
       browser,
       os,
@@ -40,7 +46,7 @@ app.get('/api/log/visit/:uuid', async (req, res) => {
   }
 })
 
-app.get('/api/events', async (req, res) => {
+app.get('/api/events', async (req, res)=>{
   try{
     let times = await db.query(`
       SELECT * FROM events
@@ -55,14 +61,15 @@ app.get('/api/events', async (req, res) => {
 
 app.get('/api/statistics/:timeunit', async (req, res) => {
   //start, end, browser, os, path
-  let start = (new Date(req.query.start)).toISOString(), end = (new Date(req.query.end)).toISOString()
+  let start = (new Date(req.query.start)).toISOString(), end = (new Date(req.query.end)).toISOString();
+  console.log(start, end);
   let count = 2;
   let result = await db.query(
     `SELECT date_trunc($${1}, timestamp) AS timebucket, COUNT(*), COUNT(DISTINCT uuid) AS uniqueCount FROM events
       WHERE ${start ? 'timestamp >= $' + count++ : ""}
       ${end ? ' AND timestamp <= $' + count++ : ""}
       ${req.query.browser ? ' AND browser = $' + count++ : ""}
-      ${req.query.os ? ' AND end = $' + count++ : ""}
+      ${req.query.os ? ' AND os = $' + count++ : ""}
       ${req.query.path ? ' AND path LIKE $' + count++ : ""}
       GROUP BY date_trunc($${1}, timestamp)`
       ,
@@ -75,11 +82,25 @@ app.get('/api/statistics/:timeunit', async (req, res) => {
   res.send(result.rows)
 });
 
-app.get('/api/values', async (req, res) => {
-  let result = await db.query(
-    `SELECT DISTINCT (browser, os) FROM events`
-  )
-  console.log(result.rows);
+app.get('/api/values', async (req, res)=>{
+  try{
+    let returnResult = {
+      browser: [],
+      os: []
+    };
+    let browsers = await db.query(`SELECT DISTINCT browser FROM events`);
+    let oss = await db.query(`SELECT DISTINCT os FROM events`);
+    browsers.rows.map((item)=>{
+      returnResult.browser.push(item.browser)
+    });
+    oss.rows.map((item)=>{
+      returnResult.os.push(item.os)
+    });
+    res.send(returnResult);
+  } catch(e) {
+    console.log('Error getting values:', e);
+    res.status(400).send(e.message);
+  }
 })
 
 app.listen(process.env.PORT || 3001, () => {
