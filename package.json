@@ -24,7 +24,7 @@
     "build": "react-scripts build",
     "test": "mocha --exit src/test",
     "eject": "react-scripts eject",
-    "reset": "psql -d analytics -f reset.sql"
+    "reset": "psql --host --port --username --password --dbname -f reset.sql"
   },
   "proxy": "http://localhost:3001",
   "devDependencies": {
