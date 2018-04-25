@@ -24,7 +24,7 @@
     "build": "react-scripts build",
     "test": "mocha --exit src/test",
     "eject": "react-scripts eject",
-    "reset": "node reset.sql"
+    "reset": "node reset.js"
   },
   "proxy": "http://localhost:3001",
   "devDependencies": {
