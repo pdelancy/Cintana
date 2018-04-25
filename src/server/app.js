@@ -55,6 +55,7 @@ app.get('/api/events', async (req, res)=>{
 
 app.get('/api/statistics/:timeunit', async (req, res) => {
   //start, end, browser, os, path
+  try{
   let start = (new Date(req.query.start)).toISOString(), end = (new Date(req.query.end)).toISOString()
   let count = 2;
   let result = await db.query(
@@ -62,7 +63,7 @@ app.get('/api/statistics/:timeunit', async (req, res) => {
       WHERE ${start ? 'timestamp >= $' + count++ : ""}
       ${end ? ' AND timestamp <= $' + count++ : ""}
       ${req.query.browser ? ' AND browser = $' + count++ : ""}
-      ${req.query.os ? ' AND end = $' + count++ : ""}
+      ${req.query.os ? ' AND os = $' + count++ : ""}
       ${req.query.path ? ' AND path LIKE $' + count++ : ""}
       GROUP BY date_trunc($${1}, timestamp)`
       ,
@@ -73,6 +74,10 @@ app.get('/api/statistics/:timeunit', async (req, res) => {
       req.query.path ? req.query.path + '%' : null
     ].filter(a => a));
   res.send(result.rows)
+} catch(e){
+  console.log("error fetching stats", e);
+  res.status(400).send(e.message)
+}
 });
 
 app.get('/api/values', async (req, res)=>{
