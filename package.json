@@ -22,7 +22,7 @@
     "build": "react-scripts build",
     "test": "mocha --exit src/test",
     "eject": "react-scripts eject",
-    "reset": "psql --host --port --username --password --dbname -f reset.sql"
+    "reset": "node reset.sql"
   },
   "proxy": "http://localhost:3001",
   "devDependencies": {
