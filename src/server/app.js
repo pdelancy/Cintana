@@ -1,13 +1,13 @@
 "use strict";
 
 const moment = require('moment');
-
 const express = require('express');
 const app = express();
 const useragent = require('useragent');
 
+
 const { Pool } = require('pg');
-const db = new Pool({database: 'analytics'});
+const db = new Pool();
 
 app.get("/api", (req, res) => {
   console.log("HELLO!");
@@ -55,14 +55,15 @@ app.get('/api/events', async (req, res)=>{
 
 app.get('/api/statistics/:timeunit', async (req, res) => {
   //start, end, browser, os, path
-  let start = (new Date(req.query.start)).toISOString(), end = (new Date(req.query.end)).toISOString()
+  let start = (new Date(req.query.start)).toISOString(), end = (new Date(req.query.end)).toISOString();
+  console.log(start, end);
   let count = 2;
   let result = await db.query(
     `SELECT date_trunc($${1}, timestamp) AS timebucket, COUNT(*), COUNT(DISTINCT uuid) AS uniqueCount FROM events
       WHERE ${start ? 'timestamp >= $' + count++ : ""}
       ${end ? ' AND timestamp <= $' + count++ : ""}
       ${req.query.browser ? ' AND browser = $' + count++ : ""}
-      ${req.query.os ? ' AND end = $' + count++ : ""}
+      ${req.query.os ? ' AND os = $' + count++ : ""}
       ${req.query.path ? ' AND path LIKE $' + count++ : ""}
       GROUP BY date_trunc($${1}, timestamp)`
       ,
