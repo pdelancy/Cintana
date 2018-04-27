@@ -7,7 +7,9 @@ const useragent = require('useragent');
 
 
 const { Pool } = require('pg');
-const db = new Pool();
+const db = new Pool({
+  database: 'analytics'
+});
 
 app.get("/api", (req, res) => {
   console.log("HELLO!");
