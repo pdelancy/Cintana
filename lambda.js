@@ -1,8 +1,6 @@
 function getEvents(){
   const { Client } = require('pg');
-  const db = new Client({
-    database: 'analytics'
-  });
+  const db = new Client();
   return db.connect()
   .then(() => {
     return db.query(`
