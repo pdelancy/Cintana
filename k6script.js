@@ -8,16 +8,21 @@ const UserAgents = {
   Chrome: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/65.0.3325.181 Safari/537.36"
 };
 
+const paths = [
+  '/k6script.js', '/app.js', '/route.js', '/something.js'
+]
+
 const agentsArray = ['WindowsPhone', 'iOSSafari', 'Chrome'];
 const host = "http://ec2-54-183-247-73.us-west-1.compute.amazonaws.com"
-const pathname = '/k6script.js';
-const pathQuery = 'path=' + encodeURIComponent(pathname);
 
 
 export default function() {
   const uuid = v4();
   let agent = UserAgents[agentsArray[Math.floor( Math.random() * 3)]];
-  let timestamp = new Date(Math.floor( Math.random() * Date.now()));
+  let dateLimit = new Date('2018-01-01T08:00:00.000Z');
+  let timestamp = new Date(Math.floor( Math.random() * (Date.now() - dateLimit.getTime())) + dateLimit.getTime());
+  let pathname = paths[Math.floor(Math.random() * paths.length)];
+  let pathQuery = 'path=' + encodeURIComponent(pathname);
   http.get(host + '/api/log/visit/' + uuid + '?' + pathQuery + '&timestamp=' + timestamp.toISOString(), { headers: { "User-Agent": agent } });
   sleep(1);
 };

@@ -7,7 +7,9 @@ const useragent = require('useragent');
 
 
 const { Pool } = require('pg');
-const db = new Pool();
+const db = new Pool({
+  database: 'analytics'
+});
 
 app.get("/api", (req, res) => {
   console.log("HELLO!");
@@ -54,18 +56,17 @@ app.get('/api/events', async (req, res)=>{
 })
 
 app.get('/api/statistics/:timeunit', async (req, res) => {
-  //start, end, browser, os, path
   let start = (new Date(req.query.start)).toISOString(), end = (new Date(req.query.end)).toISOString();
   console.log(start, end);
   let count = 2;
   let result = await db.query(
-    `SELECT date_trunc($${1}, timestamp) AS timebucket, COUNT(*), COUNT(DISTINCT uuid) AS uniqueCount FROM events
+    `SELECT date_trunc($1, timestamp) AS timebucket, SUM(visits) as count, SUM(uniquevisit) as uniquecount FROM cache
       WHERE ${start ? 'timestamp >= $' + count++ : ""}
       ${end ? ' AND timestamp <= $' + count++ : ""}
       ${req.query.browser ? ' AND browser = $' + count++ : ""}
       ${req.query.os ? ' AND os = $' + count++ : ""}
       ${req.query.path ? ' AND path LIKE $' + count++ : ""}
-      GROUP BY date_trunc($${1}, timestamp)`
+      GROUP BY timebucket`
       ,
     [
       req.params.timeunit === 'hour' ? 'hour' : 'minute',
@@ -73,6 +74,7 @@ app.get('/api/statistics/:timeunit', async (req, res) => {
       req.query.browser, req.query.os,
       req.query.path ? req.query.path + '%' : null
     ].filter(a => a));
+    console.log(result.rows);
   res.send(result.rows)
 });
 
@@ -82,8 +84,8 @@ app.get('/api/values', async (req, res)=>{
       browser: [],
       os: []
     };
-    let browsers = await db.query(`SELECT DISTINCT browser FROM events`);
-    let oss = await db.query(`SELECT DISTINCT os FROM events`);
+    let browsers = await db.query(`SELECT DISTINCT browser FROM cache`);
+    let oss = await db.query(`SELECT DISTINCT os FROM cache`);
     browsers.rows.map((item)=>{
       returnResult.browser.push(item.browser)
     });
