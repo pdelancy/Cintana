@@ -7,7 +7,9 @@ const useragent = require('useragent');
 
 
 const { Pool } = require('pg');
-const db = new Pool();
+const db = new Pool({
+  database: 'analytics'
+});
 
 app.get("/api", (req, res) => {
   console.log("HELLO!");
@@ -54,8 +56,9 @@ app.get('/api/events', async (req, res)=>{
 })
 
 app.get('/api/statistics/:timeunit', async (req, res) => {
-  let start = (new Date(req.query.start)).toISOString(), end = (new Date(req.query.end)).toISOString();
-  console.log(start, end);
+  //start, end, browser, os, path
+  try{
+  let start = (new Date(req.query.start)).toISOString(), end = (new Date(req.query.end)).toISOString()
   let count = 2;
   let result = await db.query(
     `SELECT date_trunc($1, timestamp) AS timebucket, SUM(visits) as count, SUM(uniquevisit) as uniquecount FROM cache
@@ -74,6 +77,10 @@ app.get('/api/statistics/:timeunit', async (req, res) => {
     ].filter(a => a));
     console.log(result.rows);
   res.send(result.rows)
+} catch(e){
+  console.log("error fetching stats", e);
+  res.status(400).send(e.message)
+}
 });
 
 app.get('/api/values', async (req, res)=>{
