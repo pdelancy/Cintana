@@ -7,7 +7,9 @@ const useragent = require('useragent');
 
 
 const { Pool } = require('pg');
-const db = new Pool();
+const db = new Pool(
+  {database: "cintana"}
+);
 
 const segmentations = {
   path: true,
@@ -17,7 +19,7 @@ const segmentations = {
 
 app.get("/api", (req, res) => {
   console.log("HELLO!");
-  res.send("hello world");
+  res.send(process.env.PGDATABASE);
 })
 
 app.get('/api/log/visit/:uuid', async (req, res) => {
@@ -62,6 +64,7 @@ app.get('/api/events', async (req, res)=>{
 app.get('/api/statistics/:timeunit', async (req, res) => {
   let start = (new Date(req.query.start)).toISOString(), end = (new Date(req.query.end)).toISOString();
   console.log(start, end);
+  console.log(db);
   let count = 2;
   let result = await db.query(
     `SELECT ${segmentations[req.query.segmentation] ? req.query.segmentation + ", " : ""} date_trunc($1, timestamp) AS timebucket, SUM(visits) as count, SUM(uniquevisit) as uniquecount FROM cache
