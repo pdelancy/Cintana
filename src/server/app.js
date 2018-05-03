@@ -7,6 +7,7 @@ const useragent = require('useragent');
 
 
 const { Pool } = require('pg');
+
 const db = new Pool(
   {database: "cintana"}
 );
@@ -62,9 +63,10 @@ app.get('/api/events', async (req, res)=>{
 })
 
 app.get('/api/statistics/:timeunit', async (req, res) => {
-  let start = (new Date(req.query.start)).toISOString(), end = (new Date(req.query.end)).toISOString();
-  console.log(start, end);
-  console.log(db);
+
+  //start, end, browser, os, path
+  try{
+  let start = (new Date(req.query.start)).toISOString(), end = (new Date(req.query.end)).toISOString()
   let count = 2;
   let result = await db.query(
     `SELECT ${segmentations[req.query.segmentation] ? req.query.segmentation + ", " : ""} date_trunc($1, timestamp) AS timebucket, SUM(visits) as count, SUM(uniquevisit) as uniquecount FROM cache
@@ -83,6 +85,10 @@ app.get('/api/statistics/:timeunit', async (req, res) => {
     ].filter(a => a));
     console.log(result.rows[0]);
   res.send(result.rows)
+} catch(e){
+  console.log("error fetching stats", e);
+  res.status(400).send(e.message)
+}
 });
 
 app.get('/api/values', async (req, res)=>{
