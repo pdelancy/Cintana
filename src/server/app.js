@@ -67,13 +67,14 @@ app.get('/api/statistics/:timeunit', async (req, res) => {
       ${req.query.browser ? ' AND browser = $' + count++ : ""}
       ${req.query.os ? ' AND os = $' + count++ : ""}
       ${req.query.path ? ' AND path LIKE $' + count++ : ""}
-      GROUP BY timebucket`
+      GROUP BY ${req.query.segmentation ? ' $' + count++ + ", ": ""} timebucket`
       ,
     [
       req.params.timeunit === 'hour' ? 'hour' : 'minute',
       start, end,
       req.query.browser, req.query.os,
-      req.query.path ? req.query.path + '%' : null
+      req.query.path ? req.query.path + '%' : null,
+      req.query.segmentation
     ].filter(a => a));
     console.log(result.rows);
   res.send(result.rows)
