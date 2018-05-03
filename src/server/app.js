@@ -7,13 +7,20 @@ const useragent = require('useragent');
 
 
 const { Pool } = require('pg');
-const db = new Pool({
-  database: 'analytics'
-});
+
+const db = new Pool(
+  {database: "cintana"}
+);
+
+const segmentations = {
+  path: true,
+  os: true,
+  browser: true
+}
 
 app.get("/api", (req, res) => {
   console.log("HELLO!");
-  res.send("hello world");
+  res.send(process.env.PGDATABASE);
 })
 
 app.get('/api/log/visit/:uuid', async (req, res) => {
@@ -56,27 +63,27 @@ app.get('/api/events', async (req, res)=>{
 })
 
 app.get('/api/statistics/:timeunit', async (req, res) => {
+
   //start, end, browser, os, path
   try{
   let start = (new Date(req.query.start)).toISOString(), end = (new Date(req.query.end)).toISOString()
   let count = 2;
   let result = await db.query(
-    `SELECT date_trunc($1, timestamp) AS timebucket, SUM(visits) as count, SUM(uniquevisit) as uniquecount FROM cache
+    `SELECT ${segmentations[req.query.segmentation] ? req.query.segmentation + ", " : ""} date_trunc($1, timestamp) AS timebucket, SUM(visits) as count, SUM(uniquevisit) as uniquecount FROM cache
       WHERE ${start ? 'timestamp >= $' + count++ : ""}
       ${end ? ' AND timestamp <= $' + count++ : ""}
       ${req.query.browser ? ' AND browser = $' + count++ : ""}
       ${req.query.os ? ' AND os = $' + count++ : ""}
       ${req.query.path ? ' AND path LIKE $' + count++ : ""}
-      GROUP BY ${req.query.segmentation ? ' $' + count++ + ", ": ""} timebucket`
+      GROUP BY ${segmentations[req.query.segmentation] ? req.query.segmentation + ", " : ""} timebucket`
       ,
     [
       req.params.timeunit === 'hour' ? 'hour' : 'minute',
       start, end,
       req.query.browser, req.query.os,
-      req.query.path ? req.query.path + '%' : null,
-      req.query.segmentation
+      req.query.path ? req.query.path + '%' : null
     ].filter(a => a));
-    console.log(result.rows);
+    console.log(result.rows[0]);
   res.send(result.rows)
 } catch(e){
   console.log("error fetching stats", e);
